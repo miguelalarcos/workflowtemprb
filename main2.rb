@@ -1,3 +1,4 @@
+require 'rspec'
 require 'test/unit'
 require 'test/unit/ui/console/testrunner'
 
@@ -66,7 +67,6 @@ module SimpleUnit
         other = Unit(other, @unit)
       end
       if @unit != other.unit
-        print @unit, ' ', other.unit
         raise 'units must be of same type'
       end
       Unit.new(@measure + other.measure, @unit)
@@ -216,36 +216,35 @@ class TestAggregates < Test::Unit::TestCase
 
   def test_empty
     palet = T.new(unit: 'palet')
-    assert palet.aggregate == [[1, "palet", "_empty_"]]
+    assert palet.aggregate == [[1, 'palet', '_empty_']]
+  end
+
+  def test_one_add
+    palet = T.new(unit: 'palet')
+    agg = palet.add_aggregate [[1, 'caja', 'manzana']]
+    assert palet.aggregate == [[1, 'caja', 'manzana'], [1, 'palet', 'manzana']]
+    assert agg == [[1, 'caja', 'manzana'], [-1, 'palet', '_empty_'], [1, 'palet', 'manzana']]
   end
 
   def test_2_aggregates_same_product
-    palet = T.new(unit: 'palet')
-    palet.add_aggregate [[1, 'caja', 'manzana'], [4, 'botella', 'manzana']]
-    assert palet.aggregate == [[1, 'caja', 'manzana'], [4, 'botella', 'manzana'], [1, 'palet', 'manzana']]
+    caja = T.new(unit: 'caja')
+    agg = caja.add_aggregate [[1, 'botella', 'manzana'], [2, 'botella', 'manzana']]
+    assert caja.aggregate == [[3, 'botella', 'manzana'], [1, 'caja', 'manzana']]
+    assert agg == [[1, 'botella', 'manzana'], [2, 'botella', 'manzana'], [-1, 'caja', '_empty_'], [1, 'caja', 'manzana']]
   end
 
   def test_2_aggregates_different_product
     caja = T.new(unit: 'caja')
-    caja.add_aggregate [[1, 'botella', 'pera'], [2, 'botella', 'manzana']]
+    agg = caja.add_aggregate [[1, 'botella', 'pera'], [2, 'botella', 'manzana']]
     assert caja.aggregate == [[1, 'botella', 'pera'], [2, 'botella', 'manzana'], [1, 'caja', 'mixted']]
+    assert agg == [[1, 'botella', 'pera'], [2, 'botella', 'manzana'], [-1, 'caja', '_empty_'], [1, 'caja', 'mixted']]
   end
 
-  def test_agg_mixted
-    palet = T.new(unit: 'palet')
+  def test_negative
     caja = T.new(unit: 'caja')
-    caja.add_aggregate [[2, 'botella', 'manzana'], [2, 'botella', 'pera']]
-    assert caja.aggregate == [[2, 'botella', 'manzana'], [2, 'botella', 'pera'], [1, 'caja', 'mixted']]
-    palet.add_aggregate caja.aggregate
-    assert palet.aggregate == [[2, 'botella', 'manzana'], [2, 'botella', 'pera'],
-                               [1, 'caja', 'mixted'], [1, 'palet', 'mixted']]
-    agg = caja.add_aggregate [[-1, 'botella', 'manzana']]
-    palet.add_aggregate agg
-    assert palet.aggregate == [[1, 'botella', 'manzana'], [2, 'botella', 'pera'],
-                               [1, 'caja', 'mixted'], [1, 'palet', 'mixted']]
-    agg = caja.add_aggregate [[-1, 'botella', 'manzana']]
-    palet.add_aggregate agg
-    assert palet.aggregate == [[2, 'botella', 'pera'], [1, 'caja', 'pera'], [1, 'palet', 'pera']]
+    caja.add_aggregate [[1, 'botella', 'pera']]
+    caja.add_aggregate [[-1, 'botella', 'pera']]
+    assert caja.aggregate == [[1, 'caja', '_empty_']]
   end
 
   def test_unit_asterisk
