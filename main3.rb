@@ -13,12 +13,9 @@ module SimpleUnit
         }
     }
     attr_reader :measure, :unit
-    def initialize(measure, unit=nil)
-      if unit.nil?
-        measure, unit = measure.split
-        measure = measure.to_f
-      end
-
+    attr_accessor :product
+    def initialize(measure:, unit:, product:)
+      @product = product
       do_break = false
       base = nil
       factor = nil
@@ -40,6 +37,9 @@ module SimpleUnit
     end
 
     def +(other)
+      if @product != other.product
+        raise '+ must be same product'
+      end
       if other.is_a? Numeric
         other = Unit(other, @unit)
       end
@@ -50,17 +50,20 @@ module SimpleUnit
     end
 
     def -(other)
+      if @product != other.product
+        raise '- must be same product'
+      end
       if other.is_a? Numeric
         other = Unit(other, @unit)
       end
       if @unit != other.unit
         raise 'units must be of same type'
       end
-      Unit.new(@measure - other.measure, @unit)
+      Unit.new(measure: @measure - other.measure, unit: @unit, product: @product)
     end
 
     def *(num)
-      Unit.new(@measure*num, @unit)
+      Unit.new(measure: @measure*num, unit: @unit, product: @product)
     end
 
     def to(unit)
@@ -72,29 +75,33 @@ module SimpleUnit
         end
       end
     end
+
     def to_s
-      @measure.to_s + ' ' + @unit
+      @measure.to_s + ' ' + @unit + ' ' + @product.to_s
     end
+
   end
 end
 
 U = SimpleUnit::Unit
 
 class ThingModel
-  attr_reader :measure, :unit, :product
-  attr_accessor :stock
-  def initialize(measure:, product:, stock: 0)
-    @measure = U.new(measure)
-    @stock = stock
+
+  def initialize(product:, quantity:, unit:, subproducts:nil)
     @product = product
-    @unit = nil
+    @quantity = quantity
+    @unit = unit
+    @stock = U.new(measure: quantity, unit: unit, product: product)
+    @subproducts = subproducts
   end
 
-  def +(other)
-    if @product != other.product
-      raise '+ must be same product'
+  def stock(subproduct=nil)
+    if subproduct.nil?
+      @stock
+    else
+      q, u = @subproducts[subproduct]
+      U.new(measure: q, unit: u, product: subproduct)*@stock.measure
     end
-    @measure*@stock + other.measure*other.stock
   end
 
 end
@@ -107,15 +114,11 @@ class Thing
   end
 end
 
-c1 = ThingModel.new measure: '1 liter', product: 'zumo naranja normal', stock: 5
-c2 = ThingModel.new measure: '1.5 liter', product: 'zumo naranja normal', stock: 7
+subproducts = {'cuchilla-C10' => [5, 'unit'], 'desodorante-D3' => [1, 'unit']}
 
-print c1 + c2
+pack = ThingModel.new product: 'Pack cuchillas+desodorante', quantity: 1000, unit: 'unit', subproducts: subproducts
 
-t1 = ThingModel.new measure: '1 unit', product: 'LG-televisor-101E', stock: 100
-cu1 = ThingModel.new measure: '5 unit', product: 'Guillet cuchilla afeitar A-105', stock: 1000
-cu2 = ThingModel.new measure: '1 unit', product: 'Guillet cuchilla afeitar A-105', stock: 501
+puts pack.stock 'cuchilla-C10'
+puts pack.stock 'desodorante-D3'
+puts pack.stock
 
-puts
-
-print cu1 + cu2
